@@ -10,6 +10,7 @@
 
 #define DEFAULT_BLOCK_SIZE	4 * 1024 * 1024		// 4M
 #define DEFAULT_TIME_LIMIT	15					// 15s
+#define S_TO_NS				1000000000			// Seconds to nanoseconds ratio
 
 typedef unsigned int uint;
 typedef unsigned long long int uint64;
@@ -31,14 +32,16 @@ typedef struct {
 	uint64 bytes_total;
 } TEST;
 
-time_t time_now() {
+struct timespec time_now() {
 	struct timespec now;
 	clock_gettime(CLOCK_REALTIME, &now);
 	// convert to milliseconds
-	return now.tv_sec * 1000 + now.tv_nsec / 1000000;
+	//printf("time_now: %ld s %ld ns = %ld ms\n", now.tv_sec, now.tv_nsec, now.tv_sec * 1000 + now.tv_nsec / 1000000);
+	return now;
 }
 
 int parse_block_size(const char *a) {
+	fputs("parse_block_size is not implemented yet!", stderr);
 	return DEFAULT_BLOCK_SIZE;
 }
 
@@ -47,52 +50,63 @@ void fill_buffer(char *buffer, size_t size) {
 		buffer[i]=(uint16) rand() % USHRT_MAX;
 }
 
-char *format_speed(char *s, uint64 bytes, time_t time) {
-	float speed = ((float)bytes / 1024) / ((float)time / 1000);	// KB/s
-	char *unit = "KB";
-
-	if(speed > 1024) {
-		speed /= 1024;
+char *format_unit(char *str, double val) {
+	char *unit = "B";
+	if(val > 1024) {
+		val /= 1024;
+		unit = "KB";
+	}
+	if(val > 1024) {
+		val /= 1024;
 		unit = "MB";
 	}
-	if(speed > 1024) {
-		speed /= 1024;
+	if(val > 1024) {
+		val /= 1024;
 		unit = "GB";
 	}
-	if(speed > 1024) {
-		speed /= 1024;
+	if(val > 1024) {
+		val /= 1024;
 		unit = "TB";
 	}
+	sprintf(str, "%4.2f%s", val, unit);
+	return str;
+}
 
-	sprintf(s, "%4.2f%s/s", speed, unit);
-	return s;
+char *format_speed(char *str, uint64 bytes, time_t time) {
+	double speed = (double)bytes / ((double)time / S_TO_NS);
+	format_unit(str, speed);
+	strcat(str, "/s");
+	return str;
 }
 
 void print_partial(TEST *test, bool is_write) {
-	char str[20];
-	if(test->time_partial > 1000) {		// 1 second
+	char s[20];
+	if(test->time_partial > S_TO_NS) {		// 1 second
 		char *msg = (!is_write ?  "Read" : "Write");
-		printf("%s %s\n", msg, format_speed(str, test->bytes_partial, test->time_partial));
+		printf("%s %s\n", msg, format_speed(s, test->bytes_partial, test->time_partial));
 		
 		test->bytes_partial = 0;
 		test->time_partial = 0;
 	}
 }
 
-void print_total(TEST *test, bool is_write) {
-	char str[20];
+void print_total(TEST *test, size_t block_size, bool is_write) {
+	char s1[20];
+	char s2[20];
 	char *type = (!is_write ?  "Read" : "Write");
-	printf("Bytes %s: %lluMB (%llu) in %.2fs, %d blocks\n", type,
-		test->bytes_total / 1024 / 1024,
+	printf("Bytes %s: %s (%lluB) in %.2fs, %d blocks of %s\n",
+		type,
+		format_unit(s1, test->bytes_total),
 		test->bytes_total,
-		test->time_total / (float) 1000,
-		test->count_op);
+		test->time_total / (double) S_TO_NS,
+		test->count_op,
+		format_unit(s2, block_size));
 	printf("%s speed: %s\n", type,
-		format_speed(str, test->bytes_total, test->time_total));
+		format_speed(s1, test->bytes_total, test->time_total));
 }
 
 ssize_t benchmark_operation(int fd, TEST *test, char *buffer, size_t block_size, bool is_write) {
-	time_t start, end;
+	struct timespec start, end;
 	ssize_t result;
 
 	start = time_now();
@@ -101,13 +115,15 @@ ssize_t benchmark_operation(int fd, TEST *test, char *buffer, size_t block_size,
 		read(fd, buffer, block_size);
 	end = time_now();
 	
-	if(result < 1) {
-		print_partial(test, is_write);
-		fprintf(stderr, "I/O operation error with errno %d\n", errno);
-		return -1;
+	if(result < 0) {
+		perror("I/O operation error");
+		return result;
 	}
 
-	time_t time_elapsed = end - start;
+	time_t time_elapsed =		// Calculating time difference
+		(end.tv_sec - start.tv_sec) * S_TO_NS +		// Convert to ns
+		(end.tv_nsec - start.tv_nsec);
+	
 	test->time_partial += time_elapsed;
 	test->time_total += time_elapsed;
 	test->bytes_partial += result;
@@ -134,78 +150,86 @@ ssize_t benchmark_operation(int fd, TEST *test, char *buffer, size_t block_size,
 
 void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_size, time_t time_limit, bool is_random) {
 	char buffer[block_size];
-	TEST t1, t2, t3;
+	TEST t1 = {}, t2 = {}, t3 = {};
 	time_t time_total;
 	off_t result;
 
-	// Select flag for READ-ONLY or READ-WRITE
-	int open_mode = (test_type != READ ? O_RDONLY : O_RDWR);
-
+	// Select flags for READ-ONLY or READ-WRITE
+	int open_mode = (test_type == READ ? O_RDONLY : O_RDWR | O_CREAT);
+	
 	// Open file
-	int fd = open(file_name, open_mode | /* O_DIRECT | */ O_SYNC | O_CREAT, S_IRUSR | S_IWUSR);
+	int fd = open(file_name, open_mode | /* O_DIRECT | */ O_SYNC, S_IRUSR | S_IWUSR);
 	if(fd < 0) {
-		fprintf(stderr, "Cannot open %s, errno %d\n", file_name, errno);
+		fprintf(stderr, "Cannot open %s: %s (errno %d)\n", file_name, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
 
-	int err = 0;
 	printf("Running benchmark on file %s...\n", file_name);
 	do {
-		printf("%d\n", test_type);
+		size_t buffer_size = block_size;
+		
+		if(is_random)
+			fputs("random test is not implemented yet!", stderr);
+			//lseek(fd, random(), SEEK_CUR);
+		
 		switch (test_type) {
 			case READ_WRITE_READ:
 			case READ_WRITE:
-				printf("READ_WRITE_READ\n");
 				// Read
 				result = benchmark_operation(fd, &t1, buffer, block_size, false);
-				lseek(fd, result, SEEK_CUR);
+				if(result < 1)	// check for errors
+					break;
+				lseek(fd, -result, SEEK_CUR);	// Seek back to the initial position
+				buffer_size = result;			// Write the same amount of data
 			case WRITE_READ:
 			case WRITE:
-				printf("WRITE_READ\n");
 				// Generate data for WRITE_READ and WRITE modes
 				if(test_type == WRITE_READ || test_type == WRITE)
-					fill_buffer(buffer, block_size);
+					fill_buffer(buffer, buffer_size);
 				// Write
-				result = benchmark_operation(fd, &t2, buffer, block_size, true);
-				printf("%ld\n", result);
+				result = benchmark_operation(fd, &t2, buffer, buffer_size, true);
+				if(result < 1)	// check for errors
+					break;
 				// Do not read back with READ_WRITE and WRITE modes
 				if(test_type == READ_WRITE || test_type == WRITE)
 					break;
 					
-				lseek(fd, result, SEEK_CUR);
+				lseek(fd, -result, SEEK_CUR);	// Seek back to the initial position
+				buffer_size = result;			// Write the same amount of data
 			case READ:
-				printf("READ\n");
-				err = benchmark_operation(fd, &t3, buffer, block_size, false);
+				result = benchmark_operation(fd, &t3, buffer, buffer_size, false);
 				break;
 			default:
 				perror("Invalid operation!\n");
 				exit(EXIT_FAILURE);
 		}
-		time_total = (t1.time_total + t2.time_total + t3.time_total) / 1000;
-	} while(time_total < time_limit && err == 0);	// Terminate test
+		time_total = (t1.time_total + t2.time_total + t3.time_total) / S_TO_NS;
+	} while(time_total < time_limit && result > 0);	// Terminate test
 
+	// Close file
 	close(fd);
+	
+	if(result == 0)
+		fprintf(stderr, "End-of-file reached, time limit not hit!\n");
+	else if(result < 0)
+		fprintf(stderr, "Test ended due to errors (errno %d)!\n", errno);
 
 	// Print results
 	switch (test_type) {
 		case READ_WRITE_READ:
 		case READ_WRITE:
-			print_total(&t1, false);
+			print_total(&t1, block_size, false);
 		case WRITE_READ:
 		case WRITE:
-			print_total(&t2, true);
+			print_total(&t2, block_size, true);
 			if(test_type == READ_WRITE || test_type == WRITE)
 				break;
 		case READ:
-			print_total(&t3, false);
+			print_total(&t3, block_size, false);
 	}
 }
 
 void help() {
-// Usage of server/photo-gallery:
-//   -b, --cache-thumbnails         Generate thumbnails in background when the application starts
-//   -c, --collection stringArray   Specify a new collection. Example name=Default,path=/photos,thumbs=/thumbs
-//       --disable-webdav           Disable WebDAV
 	puts("Usage of disk-benchmark:");
 	puts("  -r                 Read test");
 	puts("  -w                 Write test. The data written is randomly generated, this is a DESTRUCTIVE test");
