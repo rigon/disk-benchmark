@@ -165,7 +165,8 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 	char *buffer_cmp = (char *)malloc(block_size * sizeof(char));
 	TEST t1 = {}, t2 = {}, t3 = {};
 	time_t time_total;
-	off_t result;
+	off_t file_size, result;
+	char str[20];
 
 	// Select flags for READ-ONLY or READ-WRITE
 	int open_mode =
@@ -179,14 +180,20 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 		fprintf(stderr, "Cannot open %s: %s (errno %d)\n", file_name, strerror(errno), errno);
 		exit(EXIT_FAILURE);
 	}
+	
+	// Find file size
+	file_size = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
 
-	printf("Running benchmark on file %s...\n", file_name);
+	printf("## %s test with block size %s, file %s...\n",
+		is_random ? "Random" : "Sequential",
+		format_unit(str, block_size), file_name);
+	
 	do {
 		size_t buffer_size = block_size;
 		
-		if(is_random)
-			fputs("random test is not implemented yet!\n", stderr);
-			//lseek(fd, random(), SEEK_CUR);
+		if(is_random)	// Seek into a random location of the file
+			printf("SEEK %ld\n", lseek(fd, ((double)rand()/RAND_MAX) * file_size - block_size, SEEK_SET));
 		
 		switch (test_type) {
 			case READ_WRITE_READ:
