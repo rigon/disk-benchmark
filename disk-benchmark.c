@@ -149,13 +149,17 @@ ssize_t benchmark_operation(int fd, TEST *test, char *buffer, size_t block_size,
 }
 
 void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_size, time_t time_limit, bool is_random) {
-	char buffer[block_size];
+	char *buffer = (char *)malloc(block_size * sizeof(char));
+	char *buffer_cmp = (char *)malloc(block_size * sizeof(char));
 	TEST t1 = {}, t2 = {}, t3 = {};
 	time_t time_total;
 	off_t result;
 
 	// Select flags for READ-ONLY or READ-WRITE
-	int open_mode = (test_type == READ ? O_RDONLY : O_RDWR | O_CREAT);
+	int open_mode =
+		test_type == READ_WRITE || test_type == READ_WRITE_READ ? O_RDWR :
+		test_type == WRITE_READ || test_type == WRITE ? O_RDWR | O_CREAT :
+		O_RDONLY;	// default
 	
 	// Open file
 	int fd = open(file_name, open_mode | /* O_DIRECT | */ O_SYNC, S_IRUSR | S_IWUSR);
@@ -197,17 +201,21 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 				lseek(fd, -result, SEEK_CUR);	// Seek back to the initial position
 				buffer_size = result;			// Write the same amount of data
 			case READ:
-				result = benchmark_operation(fd, &t3, buffer, buffer_size, false);
+				result = benchmark_operation(fd, &t3, buffer_cmp, buffer_size, false);
+				// Compare between data written and data read back
+				if(test_type != READ && strncmp(buffer, buffer_cmp, block_size) != 0) {
+					fprintf(stderr, "Error: the data written differs from the data read back\n");
+					result = -1;
+				}
 				break;
-			default:
-				perror("Invalid operation!\n");
-				exit(EXIT_FAILURE);
 		}
 		time_total = (t1.time_total + t2.time_total + t3.time_total) / S_TO_NS;
 	} while(time_total < time_limit && result > 0);	// Terminate test
 
 	// Close file
 	close(fd);
+	free(buffer);
+	free(buffer_cmp);
 	
 	if(result == 0)
 		fprintf(stderr, "End-of-file reached, time limit not hit!\n");
@@ -218,13 +226,16 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 	switch (test_type) {
 		case READ_WRITE_READ:
 		case READ_WRITE:
+			puts("-- Results test Read before Write:");
 			print_total(&t1, block_size, false);
 		case WRITE_READ:
 		case WRITE:
+			puts("-- Results test Write:");
 			print_total(&t2, block_size, true);
 			if(test_type == READ_WRITE || test_type == WRITE)
 				break;
 		case READ:
+			puts("-- Results Read:");
 			print_total(&t3, block_size, false);
 	}
 }
