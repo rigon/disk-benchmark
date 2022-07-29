@@ -9,9 +9,9 @@
 #include <time.h>
 #include <limits.h>
 
-#define DEFAULT_BLOCK_SIZE	4 * 1024 * 1024		// 4M
-#define DEFAULT_TIME_LIMIT	15					// 15s
-#define S_TO_NS				1000000000			// Seconds to nanoseconds ratio
+#define DEFAULT_BLOCK_SIZE 4 * 1024 * 1024 // 4M
+#define DEFAULT_TIME_LIMIT 15              // 15s
+#define S_TO_NS            1000000000      // Seconds to nanoseconds ratio
 
 typedef unsigned int uint;
 typedef unsigned long long int uint64;
@@ -193,7 +193,7 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 		size_t buffer_size = block_size;
 		
 		if(is_random)	// Seek into a random location of the file
-			printf("SEEK %ld\n", lseek(fd, ((double)rand()/RAND_MAX) * file_size - block_size, SEEK_SET));
+			lseek(fd, ((double)rand()/RAND_MAX) * file_size - block_size, SEEK_SET);
 		
 		switch (test_type) {
 			case READ_WRITE_READ:
