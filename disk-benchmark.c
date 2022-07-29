@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -38,9 +39,34 @@ struct timespec time_now() {
 	return now;
 }
 
-int parse_block_size(const char *a) {
-	fputs("parse_block_size is not implemented yet!", stderr);
-	return DEFAULT_BLOCK_SIZE;
+int parse_block_size(char *a) {
+	int i;
+	int unit = 1;
+	
+	for(i=0; a[i] != '\0'; i++) {
+		if(!isdigit(a[i])) {
+			switch(a[i]) {
+				case 'K':
+					unit = 1024;
+					break;
+				case 'M':
+					unit = 1024 * 1024;
+					break;
+				default:
+					fprintf(stderr, "Invalid format %s, only K and M allowed\n", a);
+					exit(EXIT_FAILURE);
+			}
+			a[i] = '\0';
+			break;
+		}
+	}
+	
+	if(i < 1) {
+		fprintf(stderr, "Invalid format %s, only K and M allowed\n", a);
+		exit(EXIT_FAILURE);
+	}
+	
+	return atoi(a) * unit;
 }
 
 void fill_buffer(char *buffer, size_t size) {
@@ -159,7 +185,7 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 		size_t buffer_size = block_size;
 		
 		if(is_random)
-			fputs("random test is not implemented yet!", stderr);
+			fputs("random test is not implemented yet!\n", stderr);
 			//lseek(fd, random(), SEEK_CUR);
 		
 		switch (test_type) {
@@ -236,7 +262,7 @@ void help() {
 	puts("  -h, --help         Shows this help");
 	puts("  -s, --sequential   Performs a sequential test");
 	puts("  -u, --random       Performs a random test, a 4K block size will be used");
-	puts("  -b, --block-size   Sets the block size for sequential test");
+	puts("  -b, --block-size   Sets the block size for sequential test (K and M multiplier allowed)");
 	puts("  -t, --time-limit   Duration of each test");
 	exit(EXIT_FAILURE);
 }
@@ -273,10 +299,14 @@ int main(int argc, char **argv) {
 		// Block size and time limit
 		else if(strcmp("-b", a) == 0 || strcmp("--block-size", a) == 0) {
 			i++;
+			if(i >= argc)
+				fprintf(stderr, "Block size not provided\n"), exit(EXIT_FAILURE);
 			block_size = parse_block_size(argv[i]);
 		}
 		else if(strcmp("-t", a) == 0 || strcmp("--time-limit", a) == 0) {
 			i++;
+			if(i >= argc)
+				fprintf(stderr, "Time limit not provided\n"), exit(EXIT_FAILURE);
 			time_limit = atoi(argv[i]);
 		}
 		else if(strcmp("-h", a) == 0 || strcmp("--help", a) == 0)
@@ -291,7 +321,7 @@ int main(int argc, char **argv) {
 	}
 
 	if(file_name == NULL) {
-		perror("No filename provided\n");
+		fputs("No filename provided\n", stderr);
 		help();
 	}
 	
