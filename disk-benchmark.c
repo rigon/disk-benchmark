@@ -35,8 +35,6 @@ typedef struct {
 struct timespec time_now() {
 	struct timespec now;
 	clock_gettime(CLOCK_REALTIME, &now);
-	// convert to milliseconds
-	//printf("time_now: %ld s %ld ns = %ld ms\n", now.tv_sec, now.tv_nsec, now.tv_sec * 1000 + now.tv_nsec / 1000000);
 	return now;
 }
 
@@ -120,28 +118,16 @@ ssize_t benchmark_operation(int fd, TEST *test, char *buffer, size_t block_size,
 		return result;
 	}
 
-	time_t time_elapsed =		// Calculating time difference
+	time_t time_elapsed =		// Calculate time difference
 		(end.tv_sec - start.tv_sec) * S_TO_NS +		// Convert to ns
 		(end.tv_nsec - start.tv_nsec);
 	
+	// Update statistics
 	test->time_partial += time_elapsed;
 	test->time_total += time_elapsed;
 	test->bytes_partial += result;
 	test->bytes_total += result;
 	test->count_op++;
-
-	// if (ferror(f)) {
-	// 	fprintf(stderr, "Error accessing the file!\n");
-	// 	return 1;
-	// }
-	// if (feof(f)) {
-	// 	fprintf(stderr, "EOF reached!\n");
-	// 	return 1;
-	// }
-	// if(result != block_size) {
-	// 	fprintf(stderr, "No enough data!\n");
-	// 	return 1;
-	// }
 
 	print_partial(test, is_write);
 
