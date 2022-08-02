@@ -264,8 +264,10 @@ void help() {
 	puts("  -r                 Read test");
 	puts("  -w                 Write test. The data written is randomly generated, this is a DESTRUCTIVE test");
 	puts("  -rw                Read and write test. The data written is the data read");
-	puts("  -wr                Write and read test. It verifies if the write operation completed correcly. The data written is randomly generated, this is a DESTRUCTIVE test");
-	puts("  -rwr               Read, write and read test. It verifies if the write operation completed correcly. The data written is the data read");
+	puts("  -wr                Write and read test. It verifies if the write operation completed correcly.");
+	puts("                     The data written is randomly generated, this is a DESTRUCTIVE test");
+	puts("  -rwr               Read, write and read test. It verifies if the data was written correcly.");
+	puts("                     The data written is the data read, this should not be destructive");
 	puts("  -h, --help         Shows this help");
 	puts("  -s, --sequential   Performs a sequential test");
 	puts("  -u, --random       Performs a random test, a 4K block size will be used");
