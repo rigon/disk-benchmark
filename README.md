@@ -23,9 +23,11 @@ Tests can be done using different stratagies:
 
 This tool uses as few dependencies as possible in order to make the compilation process as simple as possible. You just need `gcc` installed:
 
-    gcc -o disk-benchmark disk-benckmark
+    gcc -o disk-benchmark disk-benchmark.c
 
+or simply:
 
+    make
 ## Command line options
 
     Usage of disk-benchmark:
