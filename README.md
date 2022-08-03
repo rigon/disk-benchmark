@@ -32,7 +32,7 @@ or simply:
 ### ArchLinux package
 
 ArchLinux users can install directly from AUR:
-https://aur.archlinux.org/packages/disk-benchmark
+[https://aur.archlinux.org/packages/disk-benchmark](https://aur.archlinux.org/packages/disk-benchmark)
 
 ## Command line options
 
