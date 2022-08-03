@@ -28,6 +28,12 @@ This tool uses as few dependencies as possible in order to make the compilation 
 or simply:
 
     make
+    
+### ArchLinux package
+
+ArchLinux users can install directly from AUR:
+https://aur.archlinux.org/packages/disk-benchmark
+
 ## Command line options
 
     Usage of disk-benchmark:
