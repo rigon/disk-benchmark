@@ -15,6 +15,8 @@ Multiple test types can be performed:
 - **Write and read** test. Writes first the data and reads it back, i.e. checks if the data was written correctly. The data is randomly generated, this is a DESTRUCTIVE test.
 - **Read, write and read** test. It verifies if the data was written correctly in a non destructive way. The data written is the data read.
 
+When the read test is the first to be performed, data should be available at the target, like reading from a file.
+
 Tests can be done using different stratagies:
 - Sequentially
 - Randomly
