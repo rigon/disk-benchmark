@@ -9,11 +9,11 @@ Use this tool with caution. This tool is NOT yet extensively tested and data los
 ## Features
 
 Multiple test types can be performed:
-- **Read** test
-- **Write** test. The data written is randomly generated, this is a DESTRUCTIVE test
-- **Read and write** test. The data written is the data read 
-- **Write and read** test. It verifies if the write operation completed correcly. The data written is randomly generated, this is a DESTRUCTIVE test
-- **Read, write and read** test. It verifies if the data was written correcly. The data written is the data read, this should not be destructive
+- **Read** test.
+- **Write** test. The data is randomly generated, this is a DESTRUCTIVE test.
+- **Read and write** test. Reads first the data and writes it back.
+- **Write and read** test. Writes first the data and reads it back, i.e. checks if the data was written correctly. The data is randomly generated, this is a DESTRUCTIVE test.
+- **Read, write and read** test. It verifies if the data was written correctly in a non destructive way. The data written is the data read.
 
 Tests can be done using different stratagies:
 - Sequentially

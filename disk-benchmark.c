@@ -261,13 +261,13 @@ void benchmark_file(const char *file_name, TEST_TYPE test_type, size_t block_siz
 
 void help() {
 	puts("Usage of disk-benchmark:");
-	puts("  -r                 Read test");
-	puts("  -w                 Write test. The data written is randomly generated, this is a DESTRUCTIVE test");
-	puts("  -rw                Read and write test. The data written is the data read");
-	puts("  -wr                Write and read test. It verifies if the write operation completed correcly.");
-	puts("                     The data written is randomly generated, this is a DESTRUCTIVE test");
-	puts("  -rwr               Read, write and read test. It verifies if the data was written correcly.");
-	puts("                     The data written is the data read, this should not be destructive");
+	puts("  -r                 Read test.");
+	puts("  -w                 Write test. The data is randomly generated, this is a DESTRUCTIVE test");
+	puts("  -rw                Read and write test. Reads first the data and writes it back.");
+	puts("  -wr                Write and read test. Writes first the data and reads it back, i.e. checks if the data");
+	puts("                     was written correctly. The data is randomly generated, this is a DESTRUCTIVE test.");
+	puts("  -rwr               Read, write and read test. It verifies if the data was written correctly");
+	puts("                     in a non destructive way. The data written is the data read.");
 	puts("  -h, --help         Shows this help");
 	puts("  -s, --sequential   Performs a sequential test");
 	puts("  -u, --random       Performs a random test, a 4K block size will be used");
