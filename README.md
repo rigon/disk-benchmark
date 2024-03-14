@@ -17,7 +17,7 @@ Multiple test types can be performed:
 
 When the read test is the first to be performed, data should be available at the target, like reading from a file.
 
-Tests can be done using different stratagies:
+Tests can be done using different strategies:
 - Sequentially
 - Randomly
 
