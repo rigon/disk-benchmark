@@ -57,4 +57,4 @@ ArchLinux users can install directly from AUR:
 
 Contributions to this project are very welcome, by reporting issues or just by sharing your support. That means the world to me!
 
-Please help me maintaining this tool, only with your support I can take the time to make it even better. Look here for more info [https://www.rigon.tk/#contribute](https://www.rigon.tk/#contribute)
+Please help me maintaining this tool, only with your support I can take the time to make it even better. Look here for more info [https://www.rigon.uk/#contribute](https://www.rigon.uk/#contribute)
